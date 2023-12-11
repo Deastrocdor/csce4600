@@ -81,10 +81,42 @@ func handleInput(w io.Writer, input string, exit chan<- struct{}) error {
 	case "exit":
 		exit <- struct{}{}
 		return nil
+	case "echo": // display text
+		return builtins.Echo(w, args...)
+	case "ls":
+		//assumes directory path needs handling
+		var dirPath string
+		if len(args) > 0 {
+			dirPath = args[0]
+		}
+		return builtins.ListDirectories(w, dirPath)
+	case "pwd": // print
+		return builtins.PrintWorkingDirectory(w)
+	case "mkdir":
+		// assumes directory path is first arg
+		var mode os.FileMode
+		if len(args) > 1 {
+			modeInt, err := strconv.ParseUint(args[1], 8, 32)
+			if err != nil {
+				return fmt.Errorf("invalid mode: %s", args[1])
+			}
+			mode = os.FileMode(modeInt)
+		}
+		if len(args) > 0 {
+			return builtins.MakeDirectory(args[0], mode)
+		} else {
+			return fmt.Errorf("mkdir: missing operand")
+		}
+	case "rmdir"://assumes directory path is the first arg
+		if len(args) > 0 {
+			return builtins.RemoveDirectory(args[0])
+		} else {
+			return fmt.Errorf("rmdir: missing operand")
+		}
+	default:
+		return executeCommand(name, args...)
 	}
-
-	return executeCommand(name, args...)
-}
+}	
 
 func executeCommand(name string, arg ...string) error {
 	// Otherwise prep the command
